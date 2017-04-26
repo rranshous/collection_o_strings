@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+FAILED_COUNT=0
+function incr_failed (){
+  ((FAILED_COUNT++))
+}
+
+function expect_status (){
+  status=$(curl -XGET -s -o /dev/null -w '%{http_code}' "http://localhost:8080/$1" 2> /dev/null)
+  if [ "$2" != "$status" ]; then
+    echo "FAILED status not correct [$1]: $2 | $status"
+    incr_failed
+  else
+    echo "PASSED"
+  fi
+}
+
+function add_string (){
+  curl -v -d "$2" -XPOST "http://localhost:8080/$1" 2> /dev/null
+  if [ 0 -ne $? ]; then
+    echo "warning could not add string: $1 | $2"
+  fi
+}
+
+function expect_collection_content (){
+  response=$(curl -v -XGET "http://localhost:8080/$1" 2> /dev/null)
+  if [ 0 -ne $? ]; then
+    echo "FAILED to get collection: $1"
+    incr_failed
+  else
+    if [ "$2" != "$response" ]; then
+      echo " FAILED Collections did not match [$1] $2 | $response"
+      incr_failed
+    else
+      echo "PASSED"
+    fi
+  fi
+}
+
+echo "building app"
+docker build -t cos . 2>/dev/null 1>&2
+echo "starting app"
+APID=$(docker run -d -p 8080:80 cos)
+sleep 3
+echo
+
+echo "if you ask for the strings from a non-existant collection you get back a 404"
+expect_status "fake_collection" "404"
+
+echo "if you add two strings to the same collection you can get them back"
+add_string "collection_1" "string one"
+add_string "collection_1" "string two"
+expect_collection_content "collection_1" "string one
+string two"
+
+docker kill $APID 2>/dev/null 1>&2
+docker rm $APID 2>/dev/null 1>&2
+
+echo
+if [ "$FAILED_COUNT" != "0" ]; then
+  echo "FAILED $FAILED_COUNT tests"
+  exit 1
+else
+  echo "PASSED all tests"
+  exit 0
+fi
+

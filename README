@@ -1,0 +1,11 @@
+simple server to which you send (POST) a string
+it adds that string to the list of strings for that key
+the full list can be retrieved (GET)
+
+```
+curl -XPOST -d "first string" localhost:4567/collection_one
+curl -XPOST -d "second string" localhost:4567/collection_one
+curl -XGET localhost:4567/collection_one
+```
+
+see file `test`
