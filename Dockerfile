@@ -4,7 +4,7 @@ COPY . /app
 WORKDIR /app
 
 ENV DATA_DIR /data
-RUN mkdir /data
+VOLUME /data
 
 EXPOSE 80
 
